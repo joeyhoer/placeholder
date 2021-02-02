@@ -11,6 +11,6 @@ Download the [`placeholder` script](https://raw.githubusercontent.com/joeyhoer/p
  
 ## Dependencies
 
-This script relies on `ffmpeg`:
+This script relies on `imagemagick`:
 
-    brew install ffmpeg
+    brew install imagemagick
