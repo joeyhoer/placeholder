@@ -15,6 +15,7 @@ Options: (all optional)
   -b BACKGROUND  The background color [default: #888]
   -f FOREGROUND  The foreground color [default: #fff]
   -F FONT        The label font [default: "SF-Pro"]
+  -F FONT_SIZE   The label font size [default: Calculated based on image size]
   -l LABEL       The label [default: image dimensions]
   -w WIDTH       The image width [default: parsed from output name]
   -h HEIGHT      The image height [default: parsed from output name]
@@ -46,11 +47,12 @@ foreground="#fff"
 label=""
 font="SF-Pro"
 
-while getopts "b:f:F:l:w:h:H" opt; do
+while getopts "b:f:F:s:l:w:h:H" opt; do
   case $opt in
     b) background=$OPTARG;;
     f) foreground=$OPTARG;;
     F) font=$OPTARG;;
+    s) font_size=$OPTARG;;
     l) label=$OPTARG;;
     w) width=$OPTARG;;
     h) height=$OPTARG;;
@@ -81,6 +83,7 @@ mkimg() {
   fi
   size="${width}x${height}"
 
+  # When the default label is used, replace "x" with multiplication sign in label
   if [ -z "$label" ]; then
     label=$(tr "x" "×" <<< "$size")
   fi
@@ -90,18 +93,23 @@ mkimg() {
   font_family=$(echo "$font_info" | awk '$1=="family:"{$1="";print substr($0,2)}')
   font_path=$(echo "$font_info" | awk '$1=="glyphs:"{print $2}')
 
+  # Set font size, if undefined
+  if [ -z "$font_size" ]; then
+    # This is a magic number based on the font and the number of characters
+    font_size=$((width / 8))
+    if (( $font_size > $((height / 2)) )); then
+      font_size=$((height / 2))
+    fi
+  fi
+
   if [ -n "$output" ] && [ $ext != "svg" ]; then
     # convert -size "$size" xc:"$background" "$output"
     # convert -size "$size" -background "$background" -fill "$foreground" -gravity center -pointsize 60 label:"$label" "$output"
     # Scale text porportinately
-    convert -background "$background" -fill "$foreground" -pointsize 1000 -font "$font" label:"$label" -trim +repage -resize "$((width / 2))x$((height / 2))" -gravity center -extent "$size" "$output"
+    convert -background "$background" -fill "$foreground" -pointsize "$font_size" -font "$font" "label:${label}" -trim +repage -gravity center -extent "$size" "$output"
   else
-    # This is a magic number based on the font and the number of characters
-    font_size=$((width / 8))
-    if [[ $font_size > $((height / 2)) ]]; then
-      font_size=$((height / 2))
-    fi
-    echo -n "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 $width $height'><defs><style>@font-face{font-family:'$font_family';src:url('$font_path')}:root{background:$background}rect{fill:none;outline:$foreground;outline-style:solid;outline-width:1px}</style></defs><rect width='$width' height='$height'/><text text-anchor='middle' alignment-baseline='central' x='50%' y='50%' fill='$foreground' font-family='$font_family' font-size='$font_size'>$label</text></svg>" > "$output"
+
+    echo -n "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 $width $height'><defs><style>@font-face{font-family:'$font_family';src:url('$font_path')}svg{background:$background;font-family:'$font_family'}rect{fill:#0000;outline:1px solid $foreground}text{fill:$foreground;text-anchor:middle;alignment-baseline:central}</style></defs><rect width='$width' height='$height'/><text x='50%' y='50%' font-size='$font_size'>$label</text></svg>" > "$output"
   fi
 }
 
