@@ -66,7 +66,7 @@ shift $(( OPTIND - 1 ))
 # Store output filename
 output="$1"
 
-# Print help, if no input file
+# Print help, if no output file
 [ -z "$output" ] && print_help 1
 
 # Create placeholder image
@@ -102,14 +102,16 @@ mkimg() {
     fi
   fi
 
-  if [ -n "$output" ] && [ $ext != "svg" ]; then
+  if [ $ext == "svg" ]; then
+    echo -n "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 $width $height'><defs><style>@font-face{font-family:'$font_family';src:url('$font_path')}svg{background:$background;font-family:'$font_family'}rect{fill:#0000;outline:1px solid $foreground}text{fill:$foreground;text-anchor:middle;alignment-baseline:central}</style></defs><rect width='$width' height='$height'/><text x='50%' y='50%' font-size='$font_size'>$label</text></svg>" > "$output"
+  elif [ $ext == "mp4" ]; then
+    duration=5
+    ffmpeg -loglevel error -loop 1 -r 1/${duration} -i <(convert -background "$background" -fill "$foreground" -pointsize "$font_size" -font "$font" "label:${label}" -trim +repage -gravity center -extent "$size" png:-) -c:v libx264 -tune stillimage -t ${duration} -pix_fmt yuv420p "$output"
+  else
     # convert -size "$size" xc:"$background" "$output"
     # convert -size "$size" -background "$background" -fill "$foreground" -gravity center -pointsize 60 label:"$label" "$output"
     # Scale text porportinately
     convert -background "$background" -fill "$foreground" -pointsize "$font_size" -font "$font" "label:${label}" -trim +repage -gravity center -extent "$size" "$output"
-  else
-
-    echo -n "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 $width $height'><defs><style>@font-face{font-family:'$font_family';src:url('$font_path')}svg{background:$background;font-family:'$font_family'}rect{fill:#0000;outline:1px solid $foreground}text{fill:$foreground;text-anchor:middle;alignment-baseline:central}</style></defs><rect width='$width' height='$height'/><text x='50%' y='50%' font-size='$font_size'>$label</text></svg>" > "$output"
   fi
 }
 
